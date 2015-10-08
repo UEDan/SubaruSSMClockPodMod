@@ -12,13 +12,12 @@ unsigned long prvTime;
 unsigned long curTime;
 int milli;
 int RET00;
-int RET01;
-int RET02;
+double airFuelR;
+double airFlowG;
 int RET03;
 int RET04;
 int RET05;
 int RET06;
-int RET07;
 //END TEST UNITS
 
 //Rx/Tx pins used for SSM
@@ -79,14 +78,14 @@ if (milli > 250) {
     prvTime = curTime;
 
     RET00 = (ECUbytes[0] * 0.621371192); //P9 0x000010
-    RET01 = (ECUbytes[1]); //12 0x000013 bit 1of2
-    RET02 = (ECUbytes[2] / 128 * 14.7); //P58 0x000046
     RET03 = (ECUbytes[3]); //0x000121
     RET04 = (ECUbytes[4]); //0x000064
     RET05 = (ECUbytes[5]); //0x0209C7
     RET06 = (ECUbytes[6]); //0x020168
-    RET07 = (ECUbytes[7] / 100); //12 0x000013 bit 2of2
-    
+
+    airFuelR = (ECUbytes[2] / 128 * 14.7);  //P58 0x000046
+    airFlowG = ((ECUbytes[1] | ECUbytes[7] << 8) / 100.00); //P12 0x000013 and 0x000014
+
     Serial.print("MPH:");
     Serial.print(RET00);
     Serial.print(" | ");
@@ -94,7 +93,7 @@ if (milli > 250) {
     Serial.print((RET01 | RET07 << 8) / 100);
     Serial.print(" | ");
     Serial.print("AFR: ");
-    Serial.print(RET02);
+    Serial.print(airFuelR);
     Serial.print(" | ");
     Serial.print("MPG:");
     Serial.print(RET00/3600)/(RET01/(RET02)/2800);
@@ -227,7 +226,7 @@ boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
           return false;
         }
 //        Serial.println("Checksum is good");
-        //ClrToSnd = 0;
+
         isPacket = false;
         sumBytes = 0;
         bytePlace = 0;
