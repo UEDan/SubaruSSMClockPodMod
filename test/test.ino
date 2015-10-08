@@ -11,13 +11,10 @@ byte ReqDataSize = 31;
 unsigned long prvTime;
 unsigned long curTime;
 int milli;
-int RET00;
+double milesPerHour;
 double airFuelR;
 double airFlowG;
-int RET03;
-int RET04;
-int RET05;
-int RET06;
+double milesPerGallon;
 //END TEST UNITS
 
 //Rx/Tx pins used for SSM
@@ -77,38 +74,34 @@ if (milli > 250) {
     
     prvTime = curTime;
 
-    RET00 = (ECUbytes[0] * 0.621371192); //P9 0x000010
-    RET03 = (ECUbytes[3]); //0x000121
-    RET04 = (ECUbytes[4]); //0x000064
-    RET05 = (ECUbytes[5]); //0x0209C7
-    RET06 = (ECUbytes[6]); //0x020168
-
+    milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
     airFuelR = (ECUbytes[2] / 128 * 14.7);  //P58 0x000046
     airFlowG = ((ECUbytes[1] | ECUbytes[7] << 8) / 100.00); //P12 0x000013 and 0x000014
+    milesPerGallon = (milesPerHour/3600.00)/(airFlowG/(airFuelR)/2800.00);
 
     Serial.print("MPH:");
-    Serial.print(RET00);
+    Serial.print(milesPerHour, 0);
     Serial.print(" | ");
     Serial.print("Mass airflow/s:");
-    Serial.print((RET01 | RET07 << 8) / 100);
+    Serial.print(airFlowG);
     Serial.print(" | ");
     Serial.print("AFR: ");
     Serial.print(airFuelR);
     Serial.print(" | ");
     Serial.print("MPG:");
-    Serial.print(RET00/3600)/(RET01/(RET02)/2800);
+    Serial.print(milesPerGallon);
     Serial.print(" | ");
-    Serial.print("Cruise:");
-    Serial.print(RET04);
+    Serial.print("Cruise:"); //0x000121
+    Serial.print(ECUbytes[3], BIN);
     Serial.print(" | ");
     Serial.print("Defogger:");
-    Serial.print(RET04);
+    Serial.print(ECUbytes[4], BIN); //0x000064
     Serial.print(" | ");
-    Serial.print("Gear:");
-    Serial.print(RET05);
+    Serial.print("Gear:"); //0x0209C7
+    Serial.print(ECUbytes[5]);
     Serial.print(" | ");
-    Serial.print("IAM:");
-    Serial.println(RET06);
+    Serial.print("IAM:"); //0x020168
+    Serial.println(ECUbytes[6]);
     
     }
 }
