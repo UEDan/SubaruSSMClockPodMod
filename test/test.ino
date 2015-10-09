@@ -57,10 +57,10 @@ void loop() {
     delay(500);
   }
   */
-
+/*
 curTime = millis();
 milli=curTime - prvTime; 
-/*Serial.print("curTIme:");
+Serial.print("curTIme:");
 Serial.print(curTime);
 Serial.print(" ");
 Serial.print("prvTime:");
@@ -72,7 +72,7 @@ Serial.println(milli);
 
 delay(353);
 
-if (milli > 250) {
+//if (milli > 250) {
   sendSerial.flush();
   //delay(5);
 //  Serial.print("SentTime:");
@@ -80,8 +80,8 @@ if (milli > 250) {
   writeSSM(ReqData, ReqDataSize, sendSerial);
   //Serial.print("Timer Popped | ");
   //Serial.println(sendSerial.available());
-  prvTime=millis();
-  }
+//  prvTime=millis();
+//  }
 
   if (sendSerial.available()) {  
     readECU(ECUbytes, 8, false);
@@ -89,8 +89,8 @@ if (milli > 250) {
     prvTime = curTime;
 
     milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-    airFuelR = (ECUbytes[2] / 128 * 14.7);  //P58 0x000046
-    airFlowG = ((ECUbytes[1] | ECUbytes[7] << 8) / 100.00); //P12 0x000013 and 0x000014
+    airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+    airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
     milesPerGallon = (milesPerHour/3600.00)/(airFlowG/(airFuelR)/2800.00);
 
     Serial.print("MPH:");
