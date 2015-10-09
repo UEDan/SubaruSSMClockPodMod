@@ -39,7 +39,7 @@ void setup() {
   }
   Serial.println("Ready!");
   delay(50);
-  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll
+//  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll
   delay (2);
 }
 
@@ -57,12 +57,26 @@ void loop() {
     delay(500);
   }
   */
+
 curTime = millis();
-milli=curTime - prvTime;  
+milli=curTime - prvTime; 
+/*Serial.print("curTIme:");
+Serial.print(curTime);
+Serial.print(" ");
+Serial.print("prvTime:");
+Serial.print(prvTime);
+Serial.print(" ");
+Serial.print("milli:");
+Serial.println(milli);
+*/
+
+delay(353);
 
 if (milli > 250) {
   sendSerial.flush();
   //delay(5);
+//  Serial.print("SentTime:");
+//  Serial.println(milli);
   writeSSM(ReqData, ReqDataSize, sendSerial);
   //Serial.print("Timer Popped | ");
   //Serial.println(sendSerial.available());
