@@ -3,9 +3,7 @@
 #include <LiquidCrystal_I2C.h>
 
 //TEST UNITS
-int swtVal = 0;
-int selMode = 1;
-int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
 //4th byte is # of packets you idiot.
 //double check checksum byte you jackass.
 byte ReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
@@ -26,6 +24,10 @@ byte gearReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 
 byte gearReqDataSize = 31;
 //4th byte is # of packets you idiot && double check checksum byte you jackass.
 
+byte swtVal = 0;
+byte selMode = 1;
+byte readBytes;
+int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long prvTime;
 unsigned long curTime;
 int milli;
@@ -88,10 +90,12 @@ void loop() {
   }
 
   if (sendSerial.available()) {
-    readECU(ECUbytes, 8, false);
+    readECU(ECUbytes, readBytes, false);
 
     prvTime = curTime;
 
+	lcdPrintSel();
+	/*
     milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
     airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
     airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
@@ -120,6 +124,7 @@ void loop() {
     Serial.print(" | ");
     Serial.print("IAM:"); //0x020168
     Serial.println(ECUbytes[6]);
+	*/
 
   }
   swtVal = digitalRead(12);
@@ -138,15 +143,56 @@ void ssmWriteSel() {
   switch (selMode)
   {
     case 1:
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       lcd.setCursor(0, 0);
       lcd.write("Mode 1");
       lcd.setCursor(0, 1);
       lcd.write("MPG: ");
       digitalWrite(13, HIGH);
+	  readBytes = ((mpgReqDataSize - 7) / 3);
+	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
     case 2:
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 2");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
+      digitalWrite(13, LOW);
+	  readBytes = ((mpgReqDataSize - 7) / 3);
+	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      break;
+    case 3:
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 3");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
+      digitalWrite(13, HIGH);
+	  readBytes = ((mpgReqDataSize - 7) / 3);
+	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      break;
+    case 4:
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 4");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
+      digitalWrite(13, LOW);
+	  readBytes = ((mpgReqDataSize - 7) / 3);
       writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      break;
+  }
+}
+
+void lcdPrintSel() {
+  switch (selMode)
+  {
+    case 1:
+	  milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+	  airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+	  airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
+      milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
+	  lcd.setCursor(5, 1);
+      lcd.write(milesPerGallon);
+      break;
+    case 2:
       lcd.setCursor(0, 0);
       lcd.write("Mode 2");
       lcd.setCursor(0, 1);
@@ -154,7 +200,6 @@ void ssmWriteSel() {
       digitalWrite(13, LOW);
       break;
     case 3:
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       lcd.setCursor(0, 0);
       lcd.write("Mode 3");
       lcd.setCursor(0, 1);
@@ -162,7 +207,6 @@ void ssmWriteSel() {
       digitalWrite(13, HIGH);
       break;
     case 4:
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       lcd.setCursor(0, 0);
       lcd.write("Mode 4");
       lcd.setCursor(0, 1);
