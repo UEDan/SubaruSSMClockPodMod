@@ -1,13 +1,31 @@
 #include <SoftwareSerial.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
 //TEST UNITS
-int inVal = 0;
+int swtVal = 0;
 int selMode = 1;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 //4th byte is # of packets you idiot.
 //double check checksum byte you jackass.
-byte ReqData[31] = {128,16,240,26,168,0,0,0,16,0,0,19,0,0,70,0,1,33,0,0,100,2,9,199,2,1,104,0,0,20,130}; // add throttle
+byte ReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
 byte ReqDataSize = 31;
+//END TEST UNITS
+
+//variables for MPG:
+int mpgECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+byte mpgReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
+byte mpgReqDataSize = 31;
+//variables for IAM
+int iamECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+byte iamReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
+byte iamReqDataSize = 31;
+//variables for sear selector
+int gearECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+byte gearReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
+byte gearReqDataSize = 31;
+//4th byte is # of packets you idiot && double check checksum byte you jackass.
+
 unsigned long prvTime;
 unsigned long curTime;
 int milli;
@@ -15,72 +33,69 @@ double milesPerHour;
 double airFuelR;
 double airFlowG;
 double milesPerGallon;
-//END TEST UNITS
 
+//Declare LCD as lcd and I2C address
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 //Rx/Tx pins used for SSM
 SoftwareSerial sendSerial = SoftwareSerial(10, 11); //Rx, Tx
 
 void setup() {
   //TEST SETUP
+  pinMode(13, OUTPUT);
   pinMode(12, INPUT);
   //END TEST SETUP
-  
+
   //Setup Start
   Serial.begin(115200); //for diagnostics
   Serial.println("Serial Started");
-    while (!Serial) {
-      // wait
-    }
+  while (!Serial) {
+    // wait
+  }
+  lcd.begin(16, 2); //Start LCD
+  lcd.backlight(); //Set LCD Backlight ON
+  lcd.setCursor(0, 0); //start at col 1 row 1
+  lcd.write("LCD start");
+  delay(500);
+  lcd.clear();
+
   Serial.println("starting SSM Serial");
   sendSerial.begin(4800); //SSM uses 4800 8N1 baud rate
-    while (!sendSerial) {
-      //wait
-      delay(50);
+  while (!sendSerial) {
+    //wait
+    delay(50);
   }
-  Serial.println("Ready!");
+  //Serial.println("Ready!");
   delay(50);
-//  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll
+  //  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll
   delay (2);
 }
 
-  
+
 void loop() {
-  /*TEST LOOP
-  inVal = digitalRead(12);
-  if (inVal == 0) {
-    if (selMode == 10) {
-      selMode = 0;
-    }
-    selMode++;
-    //Serial.println("Mode plus");
-    //printMode(selMode);
-    delay(500);
-  }
-  */
+  curTime = millis();
+  milli = curTime - prvTime;
 
-curTime = millis();
-milli=curTime - prvTime; 
-
-if (milli > 250) {
-  sendSerial.flush();
-  //delay(5);
-//  Serial.print("SentTime:");
-//  Serial.println(milli);
-  writeSSM(ReqData, ReqDataSize, sendSerial);
-  //Serial.print("Timer Popped | ");
-  //Serial.println(sendSerial.available());
-  prvTime=millis();
+  if (milli > 250) {
+    sendSerial.flush();
+    //delay(5);
+    //  Serial.print("SentTime:");
+    //  Serial.println(milli);
+    ssmWriteSel();
+    //writeSSM(ReqData, ReqDataSize, sendSerial);
+    //Serial.print("Timer Popped | ");
+    //Serial.println(sendSerial.available());
+    prvTime = millis();
   }
 
-  if (sendSerial.available()) {  
+  if (sendSerial.available()) {
     readECU(ECUbytes, 8, false);
-    
+
     prvTime = curTime;
 
     milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
     airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
     airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
-    milesPerGallon = (milesPerHour/3600.00)/(airFlowG/(airFuelR)/2800.00);
+    milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
 
     Serial.print("MPH:");
     Serial.print(milesPerHour, 0);
@@ -105,37 +120,55 @@ if (milli > 250) {
     Serial.print(" | ");
     Serial.print("IAM:"); //0x020168
     Serial.println(ECUbytes[6]);
-    
+
+  }
+  swtVal = digitalRead(12);
+  if (swtVal == 1) {
+    if (selMode == 4) {
+      selMode = 0;
     }
+    selMode++;
+    //Serial.println("Mode plus");
+    //printMode(selMode);
+    delay(500);
+  }
 }
-//TEST FUNCTION, PIN7
-void printMode(int selMode) {
+
+void ssmWriteSel() {
   switch (selMode)
   {
     case 1:
-      Serial.print("This is case 1 mode ");
-      Serial.println(selMode);
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 1");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
       digitalWrite(13, HIGH);
       break;
     case 2:
-      Serial.print("This is case 2 mode ");
-      Serial.println(selMode);
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 2");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
       digitalWrite(13, LOW);
       break;
-    case 3 ... 5:
-      Serial.print("This is case 3 to 5 mode ");
-      Serial.println(selMode);
+    case 3:
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 3");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
       digitalWrite(13, HIGH);
       break;
-    case 6 ... 9:
-      Serial.print("This is case 6 to 9 mode ");
-      Serial.println(selMode);
+    case 4:
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      lcd.setCursor(0, 0);
+      lcd.write("Mode 4");
+      lcd.setCursor(0, 1);
+      lcd.write("MPG: ");
       digitalWrite(13, LOW);
       break;
-    case 10:
-      Serial.print("This is case 10 mode ");
-      Serial.println(selMode);
-      digitalWrite(13, HIGH);
   }
 }
 
@@ -212,8 +245,8 @@ boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
       bytePlace += 1; //increment bytePlace
 
       //once the data is all recieved, checksum and re-set counters
-     // Serial.print("byte place: ");
-     // Serial.println(bytePlace);
+      // Serial.print("byte place: ");
+      // Serial.println(bytePlace);
       if (bytePlace == dataSize + 5) {
         checkSumByte = CheckSum(sumBytes);  //the 8 least significant bits of sumBytes
 
@@ -221,7 +254,7 @@ boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
           Serial.println(F("checksum error"));
           return false;
         }
-//        Serial.println("Checksum is good");
+        //        Serial.println("Checksum is good");
 
         isPacket = false;
         sumBytes = 0;
@@ -239,3 +272,4 @@ boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
   }
   Serial.println("");
 }
+
