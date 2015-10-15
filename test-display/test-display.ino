@@ -56,7 +56,7 @@ void setup() {
   lcd.begin(16, 2); //Start LCD
   lcd.backlight(); //Set LCD Backlight ON
   lcd.setCursor(0, 0); //start at col 1 row 1
-  lcd.write("LCD start");
+  lcd.print("LCD start");
   delay(500);
   lcd.clear();
 
@@ -68,8 +68,13 @@ void setup() {
   }
   //Serial.println("Ready!");
   delay(50);
-  //  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll
+  lcd.setCursor(0, 0);
+  lcd.print("Mode 1");
+  lcd.setCursor(0, 1);
+  lcd.print("MPG: ");
+  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll 
   delay (2);
+
 }
 
 
@@ -127,8 +132,8 @@ void loop() {
     */
 
   }
-  swtVal = digitalRead(12);
-  if (swtVal == 1) {
+  //Mode switch read
+  if (digitalRead(12) == 1) {
     if (selMode == 4) {
       selMode = 0;
     }
@@ -141,33 +146,33 @@ void loop() {
     {
       case 1: //Fuel Economy
         lcd.setCursor(0, 0);
-        lcd.write("Mode 1");
+        lcd.print("Mode 1");
         lcd.setCursor(0, 1);
-        lcd.write("MPG: ");
+        lcd.print("MPG: ");
         digitalWrite(13, HIGH);
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
       case 2: //IAM
         lcd.setCursor(0, 0);
-        lcd.write("Mode 2");
+        lcd.print("Mode 2");
         lcd.setCursor(0, 1);
-        lcd.write("IAM: ");
+        lcd.print("IAM: ");
         digitalWrite(13, LOW);
-        readBytes = ((mpgReqDataSize - 7) / 3);
+        readBytes = ((iamReqDataSize - 7) / 3);
         break;
       case 3: //Miles per hour
         lcd.setCursor(0, 0);
-        lcd.write("Mode 3");
+        lcd.print("Mode 3");
         digitalWrite(13, HIGH);
         lcd.setCursor(0, 1);
-        lcd.write("MPH: ");
+        lcd.print("MPH: ");
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
       case 4: //Air:fuel Ratio
         lcd.setCursor(0, 0);
-        lcd.write("Mode 4");
+        lcd.print("Mode 4");
         lcd.setCursor(0, 1);
-        lcd.write("AFR: ");
+        lcd.print("AFR: ");
         digitalWrite(13, LOW);
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
@@ -182,7 +187,7 @@ void ssmWriteSel() {
       writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
     case 2: //IAM
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      writeSSM(iamReqData, iamReqDataSize, sendSerial);
       break;
     case 3: //Miles per hour
       writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
@@ -201,6 +206,7 @@ void lcdPrintSel() {
       airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
+      lcd.setCursor(5, 1);
       lcd.print(milesPerGallon);
       if (milesPerGallon < 20) {
         lcd.setCursor(14, 1);
@@ -212,16 +218,19 @@ void lcdPrintSel() {
       }
       break;
     case 2: //IAM
+      lcd.setCursor(5, 1);
       lcd.print(ECUbytes[6]);
       digitalWrite(13, LOW);
       break;
     case 3: //Miles per hour
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+      lcd.setCursor(5, 1);
       lcd.print(milesPerHour);
       digitalWrite(13, HIGH);
       break;
     case 4: //Air:fuel Ratio
       airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+      lcd.setCursor(5, 1);
       lcd.print(airFuelR);
       digitalWrite(13, LOW);
       break;
