@@ -94,37 +94,37 @@ void loop() {
 
     prvTime = curTime;
 
-	lcdPrintSel();
-	/*
-    milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-    airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
-    airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
-    milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
+    lcdPrintSel();
+    /*
+      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+      airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+      airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
+      milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
 
-    Serial.print("MPH:");
-    Serial.print(milesPerHour, 0);
-    Serial.print(" | ");
-    Serial.print("Mass airflow/s:");
-    Serial.print(airFlowG);
-    Serial.print(" | ");
-    Serial.print("AFR: ");
-    Serial.print(airFuelR);
-    Serial.print(" | ");
-    Serial.print("MPG:");
-    Serial.print(milesPerGallon);
-    Serial.print(" | ");
-    Serial.print("Cruise:"); //0x000121
-    Serial.print(ECUbytes[3], BIN);
-    Serial.print(" | ");
-    Serial.print("Defogger:");
-    Serial.print(ECUbytes[4], BIN); //0x000064
-    Serial.print(" | ");
-    Serial.print("Gear:"); //0x0209C7
-    Serial.print(ECUbytes[5]);
-    Serial.print(" | ");
-    Serial.print("IAM:"); //0x020168
-    Serial.println(ECUbytes[6]);
-	*/
+      Serial.print("MPH:");
+      Serial.print(milesPerHour, 0);
+      Serial.print(" | ");
+      Serial.print("Mass airflow/s:");
+      Serial.print(airFlowG);
+      Serial.print(" | ");
+      Serial.print("AFR: ");
+      Serial.print(airFuelR);
+      Serial.print(" | ");
+      Serial.print("MPG:");
+      Serial.print(milesPerGallon);
+      Serial.print(" | ");
+      Serial.print("Cruise:"); //0x000121
+      Serial.print(ECUbytes[3], BIN);
+      Serial.print(" | ");
+      Serial.print("Defogger:");
+      Serial.print(ECUbytes[4], BIN); //0x000064
+      Serial.print(" | ");
+      Serial.print("Gear:"); //0x0209C7
+      Serial.print(ECUbytes[5]);
+      Serial.print(" | ");
+      Serial.print("IAM:"); //0x020168
+      Serial.println(ECUbytes[6]);
+    */
 
   }
   swtVal = digitalRead(12);
@@ -136,46 +136,58 @@ void loop() {
     //Serial.println("Mode plus");
     //printMode(selMode);
     delay(500);
+    lcd.clear();
+    switch (selMode)
+    {
+      case 1: //Fuel Economy
+        lcd.setCursor(0, 0);
+        lcd.write("Mode 1");
+        lcd.setCursor(0, 1);
+        lcd.write("MPG: ");
+        digitalWrite(13, HIGH);
+        readBytes = ((mpgReqDataSize - 7) / 3);
+        break;
+      case 2: //IAM
+        lcd.setCursor(0, 0);
+        lcd.write("Mode 2");
+        lcd.setCursor(0, 1);
+        lcd.write("IAM: ");
+        digitalWrite(13, LOW);
+        readBytes = ((mpgReqDataSize - 7) / 3);
+        break;
+      case 3: //Miles per hour
+        lcd.setCursor(0, 0);
+        lcd.write("Mode 3");
+        digitalWrite(13, HIGH);
+        lcd.setCursor(0, 1);
+        lcd.write("MPH: ");
+        readBytes = ((mpgReqDataSize - 7) / 3);
+        break;
+      case 4: //Air:fuel Ratio
+        lcd.setCursor(0, 0);
+        lcd.write("Mode 4");
+        lcd.setCursor(0, 1);
+        lcd.write("AFR: ");
+        digitalWrite(13, LOW);
+        readBytes = ((mpgReqDataSize - 7) / 3);
+        break;
+    }
   }
 }
 
 void ssmWriteSel() {
   switch (selMode)
   {
-    case 1:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 1");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
-      digitalWrite(13, HIGH);
-	  readBytes = ((mpgReqDataSize - 7) / 3);
-	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+    case 1: //Fuel Economy
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
-    case 2:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 2");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
-      digitalWrite(13, LOW);
-	  readBytes = ((mpgReqDataSize - 7) / 3);
-	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+    case 2: //IAM
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
-    case 3:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 3");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
-      digitalWrite(13, HIGH);
-	  readBytes = ((mpgReqDataSize - 7) / 3);
-	  writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+    case 3: //Miles per hour
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
-    case 4:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 4");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
-      digitalWrite(13, LOW);
-	  readBytes = ((mpgReqDataSize - 7) / 3);
+    case 4: //Air:fuel Ratio
       writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
   }
@@ -184,33 +196,33 @@ void ssmWriteSel() {
 void lcdPrintSel() {
   switch (selMode)
   {
-    case 1:
-	  milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-	  airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
-	  airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
+    case 1: //Fuel Economy
+      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+      airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+      airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
-	  lcd.setCursor(5, 1);
-      lcd.write(milesPerGallon);
+      lcd.print(milesPerGallon);
+      if (milesPerGallon < 20) {
+        lcd.setCursor(14, 1);
+        lcd.print("=(");
+      }
+      else if (milesPerGallon > 20) {
+        lcd.setCursor(14, 1);
+        lcd.print("=)");
+      }
       break;
-    case 2:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 2");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
+    case 2: //IAM
+      lcd.print(ECUbytes[6]);
       digitalWrite(13, LOW);
       break;
-    case 3:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 3");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
+    case 3: //Miles per hour
+      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+      lcd.print(milesPerHour);
       digitalWrite(13, HIGH);
       break;
-    case 4:
-      lcd.setCursor(0, 0);
-      lcd.write("Mode 4");
-      lcd.setCursor(0, 1);
-      lcd.write("MPG: ");
+    case 4: //Air:fuel Ratio
+      airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+      lcd.print(airFuelR);
       digitalWrite(13, LOW);
       break;
   }
