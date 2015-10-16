@@ -73,7 +73,8 @@ void setup() {
   lcd.print("Mode 1");
   lcd.setCursor(0, 1);
   lcd.print("MPG: ");
-  writeSSM(ReqData, ReqDataSize, sendSerial); //send intial SSM poll 
+  readBytes = ((mpgReqDataSize - 7) / 3);
+  writeSSM(mpgReqData, mpgReqDataSize, sendSerial); //send intial SSM poll 
   delay (2);
 
 }
