@@ -31,7 +31,7 @@ int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long prvTime;
 unsigned long curTime;
 int milli;
-double milesPerHour;
+int milesPerHour;
 double airFuelR;
 double fbkc;
 double airFlowG;
@@ -209,7 +209,7 @@ void lcdPrintSel() {
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
       lcd.setCursor(5, 1);
-      lcd.print(milesPerGallon);
+      lcd.print(milesPerGallon, 2);
       if (milesPerGallon < 20) {
         lcd.setCursor(14, 1);
         lcd.print("=(");
@@ -236,7 +236,7 @@ void lcdPrintSel() {
       lcd.setCursor(5, 1);
       lcd.print(airFuelR);
       lcd.setCursor(11, 1);
-      lcd.print(fbkc);
+      lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
   }
