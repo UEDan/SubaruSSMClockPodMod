@@ -19,9 +19,9 @@ int iamECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 byte iamReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
 byte iamReqDataSize = 31;
 //variables for sear selector
-int gearECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-byte gearReqData[31] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 70, 0, 1, 33, 0, 0, 100, 2, 9, 199, 2, 1, 104, 0, 0, 20, 130}; // add throttle
-byte gearReqDataSize = 31;
+int case4ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+byte case4ReqData[31] = {128, 16,  240, 8, 168, 0, 0, 0, 70,  2, 12,  96,  228}; // AFR && FBKC
+byte case4ReqDataSize = 13;
 //4th byte is # of packets you idiot && double check checksum byte you jackass.
 
 byte swtVal = 0;
@@ -33,6 +33,7 @@ unsigned long curTime;
 int milli;
 double milesPerHour;
 double airFuelR;
+double fbkc;
 double airFlowG;
 double milesPerGallon;
 
@@ -170,11 +171,11 @@ void loop() {
         break;
       case 4: //Air:fuel Ratio
         lcd.setCursor(0, 0);
-        lcd.print("Mode 4");
+        lcd.print("Mode 4     FBKC:");
         lcd.setCursor(0, 1);
         lcd.print("AFR: ");
         digitalWrite(13, LOW);
-        readBytes = ((mpgReqDataSize - 7) / 3);
+        readBytes = ((case4ReqDataSize - 7) / 3);
         break;
     }
   }
@@ -193,7 +194,7 @@ void ssmWriteSel() {
       writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
       break;
     case 4: //Air:fuel Ratio
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      writeSSM(case4ReqData, case4ReqDataSize, sendSerial);
       break;
   }
 }
@@ -229,9 +230,12 @@ void lcdPrintSel() {
       digitalWrite(13, HIGH);
       break;
     case 4: //Air:fuel Ratio
-      airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
+      airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
+      fbkc = ((ECUbytes[0] * 0.3515625)-45);
       lcd.setCursor(5, 1);
       lcd.print(airFuelR);
+      lcd.setCursor(11, 1);
+      lcd.print(fbkc);
       digitalWrite(13, LOW);
       break;
   }
