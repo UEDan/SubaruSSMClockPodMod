@@ -1,3 +1,4 @@
+#include <DS3231.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -24,6 +25,8 @@ byte case4ReqData[31] = {128, 16,  240, 8, 168, 0, 0, 0, 70,  2, 12,  96,  228};
 byte case4ReqDataSize = 13;
 //4th byte is # of packets you idiot && double check checksum byte you jackass.
 
+int theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
+byte timeUpdateCount = 0;
 byte swtVal = 0;
 byte selMode = 1;
 byte readBytes;
@@ -36,6 +39,7 @@ double airFuelR;
 double fbkc;
 double airFlowG;
 double milesPerGallon;
+DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
@@ -69,8 +73,6 @@ void setup() {
   }
   //Serial.println("Ready!");
   delay(50);
-  lcd.setCursor(0, 0);
-  lcd.print("Mode 1");
   lcd.setCursor(0, 1);
   lcd.print("MPG: ");
   readBytes = ((mpgReqDataSize - 7) / 3);
@@ -147,32 +149,26 @@ void loop() {
     switch (selMode)
     {
       case 1: //Fuel Economy
-        lcd.setCursor(0, 0);
-        lcd.print("Mode 1");
         lcd.setCursor(0, 1);
         lcd.print("MPG: ");
         digitalWrite(13, HIGH);
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
       case 2: //IAM
-        lcd.setCursor(0, 0);
-        lcd.print("Mode 2");
         lcd.setCursor(0, 1);
         lcd.print("IAM: ");
         digitalWrite(13, LOW);
         readBytes = ((iamReqDataSize - 7) / 3);
         break;
       case 3: //Miles per hour
-        lcd.setCursor(0, 0);
-        lcd.print("Mode 3");
         digitalWrite(13, HIGH);
         lcd.setCursor(0, 1);
         lcd.print("MPH: ");
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
       case 4: //Air:fuel Ratio
-        lcd.setCursor(0, 0);
-        lcd.print("Mode 4     FBKC:");
+        //lcd.setCursor(5, 0);
+        //lcd.print("     FBKC:");
         lcd.setCursor(0, 1);
         lcd.print("AFR: ");
         digitalWrite(13, LOW);
@@ -180,6 +176,12 @@ void loop() {
         break;
     }
   }
+
+  if (timeUpdateCount == 0 || timeUpdateCount == 255){
+    updateTimeTemp();
+    timeUpdateCount = 0;
+  }
+  timeUpdateCount++;
 }
 
 void ssmWriteSel() {
@@ -216,7 +218,7 @@ void lcdPrintSel() {
       }
       else if (milesPerGallon > 20) {
         lcd.setCursor(14, 1);
-        lcd.print("=)");
+        lcd.print("=D");
       }
       break;
     case 2: //IAM
@@ -227,19 +229,44 @@ void lcdPrintSel() {
     case 3: //Miles per hour
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
       lcd.setCursor(5, 1);
-      lcd.print(milesPerHour);
+      lcd.print(milesPerHour, 2);
       digitalWrite(13, HIGH);
       break;
     case 4: //Air:fuel Ratio
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
       fbkc = ((ECUbytes[0] * 0.3515625)-45);
       lcd.setCursor(5, 1);
-      lcd.print(airFuelR);
+      lcd.print(airFuelR, 2);
       lcd.setCursor(11, 1);
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
   }
+}
+
+void updateTimeTemp(){
+  theMinute=rtc.getMinute();
+  theHour=rtc.getHour();
+  theSecond=rtc.getSecond();
+  theTemperature=rtc.getTemperature();
+  lcd.setCursor(0,0);
+  if (theHour < 10){
+    lcd.print("0");
+  }
+  lcd.print(theHour);
+  lcd.print(":");
+  if (theMinute < 10){
+    lcd.print("0");
+  }
+  lcd.print(theMinute);
+  lcd.print(":");
+  if (theSecond < 10){
+    lcd.print("0");
+  }
+  lcd.print(theSecond);
+  lcd.setCursor(11, 0);
+  lcd.print(theTemperature);
+  lcd.print("*C");
 }
 
 /* returns the 8 least significant bits of an input byte*/
