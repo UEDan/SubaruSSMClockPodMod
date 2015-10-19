@@ -31,14 +31,9 @@ byte swtVal = 0;
 byte selMode = 1;
 byte readBytes;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-unsigned long prvTime;
-unsigned long curTime;
 int milli;
-int milesPerHour;
-double airFuelR;
-double fbkc;
-double airFlowG;
-double milesPerGallon;
+unsigned long prvTime, curTime;
+double milesPerHour, airFuelR, fbkc, airFlowG, milesPerGallon;
 DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
@@ -212,12 +207,12 @@ void lcdPrintSel() {
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
       lcd.setCursor(5, 1);
       lcd.print(milesPerGallon, 2);
+      lcd.print(" ");
+      lcd.setCursor(14, 1);
       if (milesPerGallon < 20) {
-        lcd.setCursor(14, 1);
         lcd.print("=(");
       }
       else if (milesPerGallon > 20) {
-        lcd.setCursor(14, 1);
         lcd.print("=D");
       }
       break;
@@ -229,7 +224,8 @@ void lcdPrintSel() {
     case 3: //Miles per hour
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
       lcd.setCursor(5, 1);
-      lcd.print(milesPerHour, 2);
+      lcd.print(milesPerHour);
+      lcd.print("     ");
       digitalWrite(13, HIGH);
       break;
     case 4: //Air:fuel Ratio
@@ -237,6 +233,7 @@ void lcdPrintSel() {
       fbkc = ((ECUbytes[0] * 0.3515625)-45);
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
+      lcd.print("  ");
       lcd.setCursor(11, 1);
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
