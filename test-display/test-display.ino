@@ -224,7 +224,7 @@ void lcdPrintSel() {
     case 3: //Miles per hour
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
       lcd.setCursor(5, 1);
-      lcd.print(milesPerHour);
+      lcd.print(milesPerHour, 2);
       lcd.print("     ");
       digitalWrite(13, HIGH);
       break;
