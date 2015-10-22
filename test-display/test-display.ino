@@ -234,7 +234,7 @@ void lcdPrintSel() {
         lcd.print("=D");
       }
       break;
-    case 2: //IAM
+    case 2: //IAM && knock?
       lcd.setCursor(5, 1);
       lcd.print(ECUbytes[0]);
       lcd.print(" | ");
@@ -253,7 +253,7 @@ void lcdPrintSel() {
       lcd.print("     ");
       digitalWrite(13, HIGH);
       break;
-    case 4: //Air:fuel Ratio
+    case 4: //Air:fuel Ratio && knock?
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
       fbkc = ((ECUbytes[1] * 0.3515625) - 45);
       lcd.setCursor(5, 1);
@@ -266,7 +266,7 @@ void lcdPrintSel() {
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
-    case 5: //Test case 5
+    case 5: //Mass air flow(G/s)
       airFlowG = (((ECUbytes[0] * 256.00) + ECUbytes[1]) / 100.00);
       lcd.setCursor(4, 1);
       lcd.print(airFlowG); //G/s
