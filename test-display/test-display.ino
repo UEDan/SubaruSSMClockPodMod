@@ -12,19 +12,19 @@ byte ReqDataSize = 31;
 //END TEST UNITS
 
 //variables for MPG:
-byte mpgReqData[19] = {128, 16, 240, 14, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 20, 0, 0, 70, 188};
-byte mpgReqDataSize = 19;
+byte case1ReqData[19] = {128, 16, 240, 14, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 20, 0, 0, 70, 179};
+byte case1ReqDataSize = 19;
 //variables for IAM
-byte iamReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 0, 0,  34, 186};
-byte iamReqDataSize = 13;
+byte case2ReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 0, 0,  34, 189};
+byte case2ReqDataSize = 13;
 //variables for MPH
 byte case3ReqData[10] = {128, 16, 240, 5, 168, 0, 0, 0, 16, 61};
 byte case3ReqDataSize = 10;
-//variables for test
+//variables for AFR and  FBKC
 byte case4ReqData[13] = {128, 16,  240, 8, 168, 0, 0, 0, 70, 2, 12, 96, 228}; // AFR && FBKC
 byte case4ReqDataSize = 13;
-//variables for Knock
-byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 64};
+//variables for Mass Air Flow G/s
+byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
@@ -74,7 +74,7 @@ void setup() {
   lcd.setCursor(0, 1);
   lcd.print("MPG: ");
   readBytes = ((mpgReqDataSize - 7) / 3);
-  writeSSM(mpgReqData, mpgReqDataSize, sendSerial); //send intial SSM poll
+  writeSSM(case1ReqData, case2ReqDataSize, sendSerial); //send intial SSM poll
   delay (2);
 
 }
@@ -150,13 +150,13 @@ void loop() {
         lcd.setCursor(0, 1);
         lcd.print("MPG:");
         digitalWrite(13, HIGH);
-        readBytes = ((mpgReqDataSize - 7) / 3);
+        readBytes = ((case1ReqDataSize - 7) / 3);
         break;
       case 2: //IAM
         lcd.setCursor(0, 1);
         lcd.print("IAM: ");
         digitalWrite(13, LOW);
-        readBytes = ((iamReqDataSize - 7) / 3);
+        readBytes = ((case2ReqDataSize - 7) / 3);
         break;
       case 3: //Miles per hour
         digitalWrite(13, HIGH);
@@ -193,10 +193,10 @@ void ssmWriteSel() {
   switch (selMode)
   {
     case 1: //Fuel Economy
-      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      writeSSM(case1ReqData, case1ReqDataSize, sendSerial);
       break;
     case 2: //IAM
-      writeSSM(iamReqData, iamReqDataSize, sendSerial);
+      writeSSM(case2ReqData, case2ReqDataSize, sendSerial);
       break;
     case 3: //Miles per hour
       writeSSM(case3ReqData, case3ReqDataSize, sendSerial);
@@ -215,8 +215,8 @@ void lcdPrintSel() {
   {
     case 1: //Fuel Economy
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-      airFuelR = ((ECUbytes[3] / 128.00) * 14.7);  //P58 0x000046
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[2]) / 100.00); //P12 0x000013 and 0x000014
+	  airFuelR = ((ECUbytes[3] / 128.00) * 14.7);  //P58 0x000046
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
       lcd.setCursor(4, 1);
       if (milesPerGallon < 100) {
@@ -252,7 +252,7 @@ void lcdPrintSel() {
       break;
     case 4: //Air:fuel Ratio
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
-      fbkc = ((ECUbytes[0] * 0.3515625) - 45);
+      fbkc = ((ECUbytes[1] * 0.3515625) - 45);
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
       lcd.print("  ");
