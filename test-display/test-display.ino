@@ -238,7 +238,8 @@ void lcdPrintSel() {
       lcd.setCursor(5, 1);
       lcd.print(ECUbytes[0]);
       lcd.print(" | ");
-      lcd.print(ECUbytes[1]); //Knock
+      fbkc = ((ECUbytes[1]) - 128) / 2;
+      lcd.print(fbkc); //Knock
       lcd.print(" ");
       digitalWrite(13, LOW);
       break;
