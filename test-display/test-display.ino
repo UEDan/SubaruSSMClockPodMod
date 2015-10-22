@@ -239,6 +239,9 @@ void lcdPrintSel() {
       lcd.print(ECUbytes[0]);
       lcd.print(" | ");
       fbkc = ((ECUbytes[1]) - 128) / 2;
+	  if (fbkc > 0) {
+        lcd.print(" ");
+      }
       lcd.print(fbkc); //Knock
       lcd.print(" ");
       digitalWrite(13, LOW);
@@ -257,6 +260,9 @@ void lcdPrintSel() {
       lcd.print(airFuelR, 2);
       lcd.print("  ");
       lcd.setCursor(11, 1);
+	  if (fbkc > 0) {
+        lcd.print(" ");
+      }
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
