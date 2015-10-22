@@ -12,21 +12,21 @@ byte ReqDataSize = 31;
 //END TEST UNITS
 
 //variables for MPG:
-byte mpgReqData[19] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 20, 0, 0, 70, 188};
+byte mpgReqData[19] = {128, 16, 240, 14, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 20, 0, 0, 70, 188};
 byte mpgReqDataSize = 19;
 //variables for IAM
-byte iamReqData[13] = {128, 16, 240, 26, 168, 0, 2, 1, 104, 0, 0,  34, 186};
+byte iamReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 0, 0,  34, 186};
 byte iamReqDataSize = 13;
 //variables for MPH
-byte case3ReqData[10] = {128, 16, 240, 26, 168, 0, 0, 0, 16, 61};
+byte case3ReqData[10] = {128, 16, 240, 5, 168, 0, 0, 0, 16, 61};
 byte case3ReqDataSize = 10;
 //variables for test
 byte case4ReqData[13] = {128, 16,  240, 8, 168, 0, 0, 0, 70, 2, 12, 96, 228}; // AFR && FBKC
 byte case4ReqDataSize = 13;
 //variables for Knock
-byte case5ReqData[13] = {128, 16, 240, 26, 168, 0, 0, 0, 19, 0, 0, 20, 64};
+byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 64};
 byte case5ReqDataSize = 13;
-//4th byte is # of packets you idiot && double check checksum byte you jackass.
+//4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
 int theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
 byte timeUpdateCount = 0;
