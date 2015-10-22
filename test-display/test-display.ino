@@ -44,9 +44,9 @@ SoftwareSerial sendSerial = SoftwareSerial(10, 11); //Rx, Tx
 void setup() {
   //TEST SETUP
   pinMode(13, OUTPUT);
-  pinMode(12, INPUT);
   //END TEST SETUP
 
+  pinMode(9, INPUT); //mode selector switch
   //Setup Start
   Serial.begin(115200); //for diagnostics
   Serial.println("Serial Started");
@@ -56,9 +56,8 @@ void setup() {
   lcd.begin(16, 2); //Start LCD
   lcd.backlight(); //Set LCD Backlight ON
   lcd.setCursor(0, 0); //start at col 1 row 1
-  lcd.print("LCD start");
-  delay(500);
-  lcd.clear();
+  lcd.print("Hello you!");
+  delay(1500);
 
   Serial.println("starting SSM Serial");
   sendSerial.begin(4800); //SSM uses 4800 8N1 baud rate
@@ -68,10 +67,11 @@ void setup() {
   }
   //Serial.println("Ready!");
   delay(50);
+  lcd.clear();
   lcd.setCursor(0, 1);
   lcd.print("MPG: ");
   readBytes = ((mpgReqDataSize - 7) / 3);
-  writeSSM(mpgReqData, mpgReqDataSize, sendSerial); //send intial SSM poll 
+  writeSSM(mpgReqData, mpgReqDataSize, sendSerial); //send intial SSM poll
   delay (2);
 
 }
@@ -132,8 +132,8 @@ void loop() {
 
   }
   //Mode switch read
-  if (digitalRead(12) == 1) {
-    if (selMode == 4) {
+  if (digitalRead(9) == 1) {
+    if (selMode == 5) {
       selMode = 0;
     }
     selMode++;
@@ -145,7 +145,7 @@ void loop() {
     {
       case 1: //Fuel Economy
         lcd.setCursor(0, 1);
-        lcd.print("MPG: ");
+        lcd.print("MPG:");
         digitalWrite(13, HIGH);
         readBytes = ((mpgReqDataSize - 7) / 3);
         break;
@@ -169,10 +169,17 @@ void loop() {
         digitalWrite(13, LOW);
         readBytes = ((case4ReqDataSize - 7) / 3);
         break;
+      case 5: //Air:fuel Ratio
+        //lcd.setCursor(5, 0);
+        //lcd.print("     FBKC:");
+        lcd.setCursor(0, 1);
+        lcd.print("Test: ");
+        readBytes = ((mpgReqDataSize - 7) / 3);
+        break;
     }
   }
 
-  if (timeUpdateCount == 0 || timeUpdateCount == 255){
+  if (timeUpdateCount == 0 || timeUpdateCount == 255) {
     updateTimeTemp();
     timeUpdateCount = 0;
   }
@@ -194,6 +201,9 @@ void ssmWriteSel() {
     case 4: //Air:fuel Ratio
       writeSSM(case4ReqData, case4ReqDataSize, sendSerial);
       break;
+    case 5: //Fuel Economy
+      writeSSM(mpgReqData, mpgReqDataSize, sendSerial);
+      break;
   }
 }
 
@@ -205,9 +215,14 @@ void lcdPrintSel() {
       airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
-      lcd.setCursor(5, 1);
+      lcd.setCursor(4, 1);
+      if (milesPerGallon < 100){
+        lcd.print(" ");
+      }
+      if (milesPerGallon == 0){
+        lcd.print("0");
+      }
       lcd.print(milesPerGallon, 2);
-      lcd.print(" ");
       lcd.setCursor(14, 1);
       if (milesPerGallon < 20) {
         lcd.print("=(");
@@ -230,7 +245,7 @@ void lcdPrintSel() {
       break;
     case 4: //Air:fuel Ratio
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
-      fbkc = ((ECUbytes[0] * 0.3515625)-45);
+      fbkc = ((ECUbytes[0] * 0.3515625) - 45);
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
       lcd.print("  ");
@@ -238,32 +253,38 @@ void lcdPrintSel() {
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
+    case 5: //Miles per hour
+      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+      lcd.setCursor(5, 1);
+      lcd.print(ECUbytes[3], BIN);
+      digitalWrite(13, HIGH);
+      break;
   }
 }
 
-void updateTimeTemp(){
-  theMinute=rtc.getMinute();
-  theHour=rtc.getHour();
-  theSecond=rtc.getSecond();
-  theTemperature=rtc.getTemperature();
-  lcd.setCursor(0,0);
-  if (theHour < 10){
+void updateTimeTemp() {
+  theMinute = rtc.getMinute();
+  theHour = rtc.getHour();
+  theSecond = rtc.getSecond();
+  theTemperature = ((rtc.getTemperature() * 1.8) + 10 );
+  lcd.setCursor(0, 0);
+  if (theHour < 10) {
     lcd.print("0");
   }
   lcd.print(theHour);
   lcd.print(":");
-  if (theMinute < 10){
+  if (theMinute < 10) {
     lcd.print("0");
   }
   lcd.print(theMinute);
   lcd.print(":");
-  if (theSecond < 10){
+  if (theSecond < 10) {
     lcd.print("0");
   }
   lcd.print(theSecond);
   lcd.setCursor(11, 0);
   lcd.print(theTemperature);
-  lcd.print("*C");
+  lcd.print("*F");
 }
 
 /* returns the 8 least significant bits of an input byte*/
