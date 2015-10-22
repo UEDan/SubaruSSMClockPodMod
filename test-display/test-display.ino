@@ -351,8 +351,8 @@ void lcdPrintSel() {
       }
 
       if (isPacket == true && data != -1) {
-        Serial.print(data); // for debugging: shows in-packet data
-        Serial.print(" ");
+        //Serial.print(data); // for debugging: shows in-packet data
+        //Serial.print(" ");
 
         if (bytePlace == 3) { // how much data is coming
           dataSize = data;
@@ -398,6 +398,6 @@ void lcdPrintSel() {
         }
       }
     }
-    Serial.println("");
+    //Serial.println("");
   }
 
