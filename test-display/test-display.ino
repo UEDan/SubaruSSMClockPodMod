@@ -14,15 +14,15 @@ byte ReqDataSize = 31;
 //variables for MPG:
 byte case1ReqData[19] = {128, 16, 240, 14, 168, 0, 0, 0, 16, 0, 0, 19, 0, 0, 20, 0, 0, 70, 179};
 byte case1ReqDataSize = 19;
-//variables for IAM
-byte case2ReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 0, 0,  34, 189};
+//variables for IAM && FBKC
+byte case2ReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 2, 12, 96, 9};
 byte case2ReqDataSize = 13;
 //variables for MPH
 byte case3ReqData[10] = {128, 16, 240, 5, 168, 0, 0, 0, 16, 61};
 byte case3ReqDataSize = 10;
-//variables for AFR and  FBKC
-byte case4ReqData[13] = {128, 16,  240, 8, 168, 0, 0, 0, 70, 2, 12, 96, 228}; // AFR && FBKC
-byte case4ReqDataSize = 13;
+//variables for AFR
+byte case4ReqData[10] = {128, 16,  240, 5, 168, 0, 0, 0, 70, 115}; // AFR
+byte case4ReqDataSize = 10;
 //variables for Mass Air Flow G/s
 byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
@@ -73,7 +73,7 @@ void setup() {
   lcd.clear();
   lcd.setCursor(0, 1);
   lcd.print("MPG: ");
-  readBytes = ((mpgReqDataSize - 7) / 3);
+  readBytes = ((case1ReqDataSize - 7) / 3);
   writeSSM(case1ReqData, case2ReqDataSize, sendSerial); //send intial SSM poll
   delay (2);
 
@@ -216,7 +216,7 @@ void lcdPrintSel() {
     case 1: //Fuel Economy
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[2]) / 100.00); //P12 0x000013 and 0x000014
-	  airFuelR = ((ECUbytes[3] / 128.00) * 14.7);  //P58 0x000046
+      airFuelR = ((ECUbytes[3] / 128.00) * 14.7);  //P58 0x000046
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
       lcd.setCursor(4, 1);
       if (milesPerGallon < 100) {
@@ -238,12 +238,11 @@ void lcdPrintSel() {
       lcd.setCursor(5, 1);
       lcd.print(ECUbytes[0]);
       lcd.print(" | ");
-      fbkc = ((ECUbytes[1]) - 128) / 2;
-	  if (fbkc > 0) {
+      fbkc = (((ECUbytes[1]) * 0.3515625) - 45);
+      if (fbkc >= 0) {
         lcd.print(" ");
       }
-      lcd.print(fbkc); //Knock
-      lcd.print(" ");
+      lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
     case 3: //Miles per hour
@@ -255,149 +254,149 @@ void lcdPrintSel() {
       break;
     case 4: //Air:fuel Ratio && knock?
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
-      fbkc = ((ECUbytes[1] * 0.3515625) - 45);
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
       lcd.print("  ");
-      lcd.setCursor(11, 1);
-	  if (fbkc > 0) {
-        lcd.print(" ");
-      }
-      lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
     case 5: //Mass air flow(G/s)
       airFlowG = (((ECUbytes[0] * 256.00) + ECUbytes[1]) / 100.00);
       lcd.setCursor(4, 1);
-      lcd.print(airFlowG); //G/s
+      if (airFlowG < 10) {
+        lcd.print("  ");
+      }
+      else if (airFlowG > 9.99) {
+        lcd.print(" ");
+      }
+      lcd.print(airFlowG, 2); //G/s
       digitalWrite(13, HIGH);
       break;
-    }
   }
+}
 
-  void updateTimeTemp() {
-    theMinute = rtc.getMinute();
-    theHour = rtc.getHour();
-    theSecond = rtc.getSecond();
-    theTemperature = ((rtc.getTemperature() * 1.8) + 15 );
-    lcd.setCursor(0, 0);
-    if (theHour < 10) {
-      lcd.print("0");
-    }
-    lcd.print(theHour);
-    lcd.print(":");
-    if (theMinute < 10) {
-      lcd.print("0");
-    }
-    lcd.print(theMinute);
-    lcd.print(":");
-    if (theSecond < 10) {
-      lcd.print("0");
-    }
-    lcd.print(theSecond);
-    lcd.setCursor(11, 0);
-    lcd.print(theTemperature);
-    lcd.print("*F");
+void updateTimeTemp() {
+  theMinute = rtc.getMinute();
+  theHour = rtc.getHour();
+  theSecond = rtc.getSecond();
+  theTemperature = ((rtc.getTemperature() * 1.8) + 15 );
+  lcd.setCursor(0, 0);
+  if (theHour < 10) {
+    lcd.print("0");
   }
-
-  /* returns the 8 least significant bits of an input byte*/
-  byte CheckSum(byte sum) {
-    byte counter = 0;
-    byte power = 1;
-    for (byte n = 0; n < 8; n++) {
-      counter += bitRead(sum, n) * power;
-      power = power * 2;
-    }
-    return counter;
+  lcd.print(theHour);
+  lcd.print(":");
+  if (theMinute < 10) {
+    lcd.print("0");
   }
-
-  /*writes data over the software serial port
-  the &digiSerial passes a reference to the external
-  object so that we can control it outside of the function*/
-  void writeSSM(byte data[], byte length, SoftwareSerial & digiSerial) {
-    //Serial.println(F("Sending packet... "));
-    for (byte x = 0; x < length; x++) {
-      digiSerial.write(data[x]);
-    }
-    //Serial.println(F("done sending."));
+  lcd.print(theMinute);
+  lcd.print(":");
+  if (theSecond < 10) {
+    lcd.print("0");
   }
+  lcd.print(theSecond);
+  lcd.setCursor(11, 0);
+  lcd.print(theTemperature);
+  lcd.print("*F");
+}
 
-  //this will change the values in dataArray, populating them with values respective of the poll array address calls
-  boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
+/* returns the 8 least significant bits of an input byte*/
+byte CheckSum(byte sum) {
+  byte counter = 0;
+  byte power = 1;
+  for (byte n = 0; n < 8; n++) {
+    counter += bitRead(sum, n) * power;
+    power = power * 2;
+  }
+  return counter;
+}
+
+/*writes data over the software serial port
+the &digiSerial passes a reference to the external
+object so that we can control it outside of the function*/
+void writeSSM(byte data[], byte length, SoftwareSerial & digiSerial) {
+  //Serial.println(F("Sending packet... "));
+  for (byte x = 0; x < length; x++) {
+    digiSerial.write(data[x]);
+  }
+  //Serial.println(F("done sending."));
+}
+
+//this will change the values in dataArray, populating them with values respective of the poll array address calls
+boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
+{
+  byte data = 0;
+  boolean isPacket = false;
+  byte sumBytes = 0;
+  byte checkSumByte = 0;
+  byte dataSize = 0;
+  byte bytePlace = 0;
+  byte zeroesLoopSpot = 0;
+  byte loopLength = 20;
+  for (byte j = 0; j < loopLength; j++)
   {
-    byte data = 0;
-    boolean isPacket = false;
-    byte sumBytes = 0;
-    byte checkSumByte = 0;
-    byte dataSize = 0;
-    byte bytePlace = 0;
-    byte zeroesLoopSpot = 0;
-    byte loopLength = 20;
-    for (byte j = 0; j < loopLength; j++)
+    data = sendSerial.read();
+    delay(2);
+
+    if (data == 128 && dataSize == 0) { //0x80 or 128 marks the beginning of a packet
+      isPacket = true;
+      j = 0;
+      //Serial.println("Begin Packet");
+    }
+
+    //terminate function and return false if no response is detected
+    if (j == (loopLength - 1) && isPacket != true)
     {
-      data = sendSerial.read();
-      delay(2);
+      return false;
+    }
 
-      if (data == 128 && dataSize == 0) { //0x80 or 128 marks the beginning of a packet
-        isPacket = true;
-        j = 0;
-        //Serial.println("Begin Packet");
+    if (isPacket == true && data != -1) {
+      //Serial.print(data); // for debugging: shows in-packet data
+      //Serial.print(" ");
+
+      if (bytePlace == 3) { // how much data is coming
+        dataSize = data;
+        loopLength = data + 6;
       }
 
-      //terminate function and return false if no response is detected
-      if (j == (loopLength - 1) && isPacket != true)
+      if (bytePlace > 4 && bytePlace - 5 < dataArrayLength && nonZeroes == false)
       {
-        return false;
+        dataArray[bytePlace - 5] = data;
+      }
+      else if (bytePlace > 4 && zeroesLoopSpot < dataArrayLength / 2 && nonZeroes == true && data != 0 && bytePlace < dataSize + 4)
+      {
+        dataArray[zeroesLoopSpot] = data;
+        dataArray[zeroesLoopSpot + (dataArrayLength / 2)] = bytePlace;
+        zeroesLoopSpot++;
       }
 
-      if (isPacket == true && data != -1) {
-        //Serial.print(data); // for debugging: shows in-packet data
-        //Serial.print(" ");
+      bytePlace += 1; //increment bytePlace
 
-        if (bytePlace == 3) { // how much data is coming
-          dataSize = data;
-          loopLength = data + 6;
+      //once the data is all recieved, checksum and re-set counters
+      // Serial.print("byte place: ");
+      // Serial.println(bytePlace);
+      if (bytePlace == dataSize + 5) {
+        checkSumByte = CheckSum(sumBytes);  //the 8 least significant bits of sumBytes
+
+        if (data != checkSumByte) {
+          Serial.println(F("checksum error"));
+          return false;
         }
+        //        Serial.println("Checksum is good");
 
-        if (bytePlace > 4 && bytePlace - 5 < dataArrayLength && nonZeroes == false)
-        {
-          dataArray[bytePlace - 5] = data;
-        }
-        else if (bytePlace > 4 && zeroesLoopSpot < dataArrayLength / 2 && nonZeroes == true && data != 0 && bytePlace < dataSize + 4)
-        {
-          dataArray[zeroesLoopSpot] = data;
-          dataArray[zeroesLoopSpot + (dataArrayLength / 2)] = bytePlace;
-          zeroesLoopSpot++;
-        }
-
-        bytePlace += 1; //increment bytePlace
-
-        //once the data is all recieved, checksum and re-set counters
-        // Serial.print("byte place: ");
-        // Serial.println(bytePlace);
-        if (bytePlace == dataSize + 5) {
-          checkSumByte = CheckSum(sumBytes);  //the 8 least significant bits of sumBytes
-
-          if (data != checkSumByte) {
-            Serial.println(F("checksum error"));
-            return false;
-          }
-          //        Serial.println("Checksum is good");
-
-          isPacket = false;
-          sumBytes = 0;
-          bytePlace = 0;
-          checkSumByte = 0;
-          dataSize = 0;
-          return true;
-        }
-        else {
-          sumBytes += data; // this is to compare with the checksum byte
-          //Serial.print(F("sum: "));
-          //Serial.println(sumBytes);
-        }
+        isPacket = false;
+        sumBytes = 0;
+        bytePlace = 0;
+        checkSumByte = 0;
+        dataSize = 0;
+        return true;
+      }
+      else {
+        sumBytes += data; // this is to compare with the checksum byte
+        //Serial.print(F("sum: "));
+        //Serial.println(sumBytes);
       }
     }
-    //Serial.println("");
   }
+  //Serial.println("");
+}
 
