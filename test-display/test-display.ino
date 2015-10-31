@@ -71,11 +71,14 @@ void setup() {
   //Serial.println("Ready!");
   delay(50);
   lcd.clear();
-  lcd.setCursor(0, 1);
-  lcd.print("MPG: ");
-  readBytes = ((case1ReqDataSize - 7) / 3);
-  writeSSM(case1ReqData, case2ReqDataSize, sendSerial); //send intial SSM poll
-  delay (2);
+
+  selMode = rtc.getYear(); //Using year from RTC to save last set menu.
+
+  //lcd.setCursor(0, 1);
+  //lcd.print("MPG: ");
+  //readBytes = ((case1ReqDataSize - 7) / 3);
+  //writeSSM(case1ReqData, case2ReqDataSize, sendSerial); //send intial SSM poll
+  ssmWriteSel(); //sends initial SSM poll
 
 }
 
@@ -136,50 +139,10 @@ void loop() {
   }
   //Mode switch read
   if (digitalRead(9) == 1) {
-    if (selMode == 5) {
+    if (selMode <= 5) {
       selMode = 0;
     }
-    selMode++;
-    //Serial.println("Mode plus");
-    //printMode(selMode);
-    delay(500);
-    lcd.clear();
-    switch (selMode)
-    {
-      case 1: //Fuel Economy
-        lcd.setCursor(0, 1);
-        lcd.print("MPG:");
-        digitalWrite(13, HIGH);
-        readBytes = ((case1ReqDataSize - 7) / 3);
-        break;
-      case 2: //IAM
-        lcd.setCursor(0, 1);
-        lcd.print("IAM: ");
-        digitalWrite(13, LOW);
-        readBytes = ((case2ReqDataSize - 7) / 3);
-        break;
-      case 3: //Miles per hour
-        digitalWrite(13, HIGH);
-        lcd.setCursor(0, 1);
-        lcd.print("MPH: ");
-        readBytes = ((case3ReqDataSize - 7) / 3);
-        break;
-      case 4: //Air:fuel Ratio
-        //lcd.setCursor(5, 0);
-        //lcd.print("     FBKC:");
-        lcd.setCursor(0, 1);
-        lcd.print("AFR: ");
-        digitalWrite(13, LOW);
-        readBytes = ((case4ReqDataSize - 7) / 3);
-        break;
-      case 5: //Air:fuel Ratio
-        //lcd.setCursor(5, 0);
-        //lcd.print("     FBKC:");
-        lcd.setCursor(0, 1);
-        lcd.print("G/s: ");
-        readBytes = ((case5ReqDataSize - 7) / 3);
-        break;
-    }
+    lcdChange();
   }
 
   if (timeUpdateCount == 0 || timeUpdateCount == 255) {
@@ -187,6 +150,51 @@ void loop() {
     timeUpdateCount = 0;
   }
   timeUpdateCount++;
+}
+
+void lcdChange() {
+  selMode++;
+  rtc.setYear(selMode);
+  //Serial.println("Mode plus");
+  //printMode(selMode);
+  delay(500);
+  lcd.clear();
+  switch (selMode)
+  {
+    case 1: //Fuel Economy
+      lcd.setCursor(0, 1);
+      lcd.print("MPG:");
+      digitalWrite(13, HIGH);
+      readBytes = ((case1ReqDataSize - 7) / 3);
+      break;
+    case 2: //IAM
+      lcd.setCursor(0, 1);
+      lcd.print("IAM: ");
+      digitalWrite(13, LOW);
+      readBytes = ((case2ReqDataSize - 7) / 3);
+      break;
+    case 3: //Miles per hour
+      digitalWrite(13, HIGH);
+      lcd.setCursor(0, 1);
+      lcd.print("MPH: ");
+      readBytes = ((case3ReqDataSize - 7) / 3);
+      break;
+    case 4: //Air:fuel Ratio
+      //lcd.setCursor(5, 0);
+      //lcd.print("     FBKC:");
+      lcd.setCursor(0, 1);
+      lcd.print("AFR: ");
+      digitalWrite(13, LOW);
+      readBytes = ((case4ReqDataSize - 7) / 3);
+      break;
+    case 5: //Air:fuel Ratio
+      //lcd.setCursor(5, 0);
+      //lcd.print("     FBKC:");
+      lcd.setCursor(0, 1);
+      lcd.print("G/s: ");
+      readBytes = ((case5ReqDataSize - 7) / 3);
+      break;
+  }
 }
 
 void ssmWriteSel() {
@@ -220,11 +228,14 @@ void lcdPrintSel() {
       milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
       lcd.setCursor(4, 1);
       if (milesPerGallon < 100) {
+        if (milesPerGallon < 10) {
+          lcd.print(" ");
+        }
         lcd.print(" ");
       }
-      if (milesPerGallon == 0) {
-        lcd.print("0");
-      }
+//      if (milesPerGallon == 0) {
+//        lcd.print("0");
+//      }
       lcd.print(milesPerGallon, 2);
       lcd.setCursor(14, 1);
       if (milesPerGallon < 20) {
@@ -262,10 +273,10 @@ void lcdPrintSel() {
     case 5: //Mass air flow(G/s)
       airFlowG = (((ECUbytes[0] * 256.00) + ECUbytes[1]) / 100.00);
       lcd.setCursor(4, 1);
-      if (airFlowG < 10) {
-        lcd.print("  ");
+      if (airFlowG < 100) {
+        lcd.print(" ");
       }
-      else if (airFlowG > 9.99) {
+      if (airFlowG < 10) {
         lcd.print(" ");
       }
       lcd.print(airFlowG, 2); //G/s
