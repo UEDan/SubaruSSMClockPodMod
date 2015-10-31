@@ -29,14 +29,14 @@ byte case5ReqDataSize = 13;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
 int theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
-byte timeUpdateCount = 0;
-byte swtVal = 0;
-byte selMode = 1;
+int timeUpdateCount = 0;
+int selMode = 1;
 byte readBytes;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int milli;
 unsigned long prvTime, curTime;
-double milesPerHour, airFuelR, fbkc, airFlowG, milesPerGallon;
+double milesPerHour, airFuelR, fbkc, airFlowG, milesPerGallon, instantMPG;
+int avgmpgCount = 0;
 DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
@@ -72,14 +72,13 @@ void setup() {
   delay(50);
   lcd.clear();
 
-  selMode = rtc.getYear(); //Using year from RTC to save last set menu.
-
+  selMode = rtc.getYear() - 1; //Using year from RTC to save last set menu.
+  lcdChange();
   //lcd.setCursor(0, 1);
   //lcd.print("MPG: ");
   //readBytes = ((case1ReqDataSize - 7) / 3);
   //writeSSM(case1ReqData, case2ReqDataSize, sendSerial); //send intial SSM poll
   ssmWriteSel(); //sends initial SSM poll
-
 }
 
 
@@ -88,6 +87,7 @@ void loop() {
   milli = curTime - prvTime;
 
   if (milli > 250) {
+    //Serial.println("write");
     sendSerial.flush();
     //delay(5);
     //  Serial.print("SentTime:");
@@ -100,6 +100,7 @@ void loop() {
   }
 
   if (sendSerial.available()) {
+    //Serial.println("read");
     readECU(ECUbytes, readBytes, false);
 
     prvTime = curTime;
@@ -135,17 +136,17 @@ void loop() {
       Serial.print("IAM:"); //0x020168
       Serial.println(ECUbytes[6]);
     */
-
+    
   }
   //Mode switch read
   if (digitalRead(9) == 1) {
-    if (selMode <= 5) {
+    if (selMode >= 5) {
       selMode = 0;
     }
     lcdChange();
   }
 
-  if (timeUpdateCount == 0 || timeUpdateCount == 255) {
+  if (timeUpdateCount == 0 || timeUpdateCount == 30) {
     updateTimeTemp();
     timeUpdateCount = 0;
   }
@@ -225,25 +226,8 @@ void lcdPrintSel() {
       milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
       airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[2]) / 100.00); //P12 0x000013 and 0x000014
       airFuelR = ((ECUbytes[3] / 128.00) * 14.7);  //P58 0x000046
-      milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
-      lcd.setCursor(4, 1);
-      if (milesPerGallon < 100) {
-        if (milesPerGallon < 10) {
-          lcd.print(" ");
-        }
-        lcd.print(" ");
-      }
-//      if (milesPerGallon == 0) {
-//        lcd.print("0");
-//      }
-      lcd.print(milesPerGallon, 2);
-      lcd.setCursor(14, 1);
-      if (milesPerGallon < 20) {
-        lcd.print("=(");
-      }
-      else if (milesPerGallon > 20) {
-        lcd.print("=D");
-      }
+      instantMPG = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
+      mpgAvg(); //Average or 10 mpg polls
       break;
     case 2: //IAM && knock?
       lcd.setCursor(5, 1);
@@ -308,6 +292,33 @@ void updateTimeTemp() {
   lcd.setCursor(11, 0);
   lcd.print(theTemperature);
   lcd.print("*F");
+}
+
+void mpgAvg() {
+  milesPerGallon += instantMPG;
+  avgmpgCount++;
+
+  if (avgmpgCount == 5) {
+    milesPerGallon /= 5.00; //Average after 10 instant polls
+
+    lcd.setCursor(4, 1);
+    if (milesPerGallon < 100) {
+      if (milesPerGallon < 10) {
+        lcd.print(" ");
+      }
+      lcd.print(" ");
+    }
+    lcd.print(milesPerGallon, 2);
+    lcd.setCursor(14, 1);
+    if (milesPerGallon < 20) {
+      lcd.print("=(");
+    }
+    else if (milesPerGallon > 20) {
+      lcd.print("=D");
+    }
+    avgmpgCount = 0; //Reset counter
+    milesPerGallon = 0.00;
+  }
 }
 
 /* returns the 8 least significant bits of an input byte*/
