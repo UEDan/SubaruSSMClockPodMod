@@ -28,7 +28,8 @@ byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
-int theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
+byte
+theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
 int timeUpdateCount = 0;
 int selMode = 1;
 byte readBytes;
@@ -298,8 +299,8 @@ void mpgAvg() {
   milesPerGallon += instantMPG;
   avgmpgCount++;
 
-  if (avgmpgCount == 5) {
-    milesPerGallon /= 5.00; //Average after 10 instant polls
+  if (avgmpgCount == 3) {
+    milesPerGallon /= 5.00; //Average after 3 instant polls
 
     lcd.setCursor(4, 1);
     if (milesPerGallon < 100) {
