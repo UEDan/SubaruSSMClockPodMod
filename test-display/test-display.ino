@@ -17,9 +17,9 @@ byte case1ReqDataSize = 19;
 //variables for IAM && FBKC
 byte case2ReqData[13] = {128, 16, 240, 8, 168, 0, 2, 1, 104, 2, 12, 96, 9};
 byte case2ReqDataSize = 13;
-//variables for MPH
-byte case3ReqData[10] = {128, 16, 240, 5, 168, 0, 0, 0, 16, 61};
-byte case3ReqDataSize = 10;
+//variables for ECT | IAT
+byte case3ReqData[13] = {128, 16,  240, 8, 168, 0, 0, 0, 8, 0, 0, 18, 74};
+byte case3ReqDataSize = 13;
 //variables for AFR
 byte case4ReqData[10] = {128, 16,  240, 5, 168, 0, 0, 0, 70, 115}; // AFR
 byte case4ReqDataSize = 10;
@@ -28,8 +28,7 @@ byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
-byte
-theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
+byte theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
 int timeUpdateCount = 0;
 int selMode = 1;
 byte readBytes;
@@ -137,7 +136,7 @@ void loop() {
       Serial.print("IAM:"); //0x020168
       Serial.println(ECUbytes[6]);
     */
-    
+
   }
   //Mode switch read
   if (digitalRead(9) == 1) {
@@ -169,16 +168,20 @@ void lcdChange() {
       digitalWrite(13, HIGH);
       readBytes = ((case1ReqDataSize - 7) / 3);
       break;
-    case 2: //IAM
+    case 2: //IAM && Knock
       lcd.setCursor(0, 1);
       lcd.print("IAM: ");
       digitalWrite(13, LOW);
       readBytes = ((case2ReqDataSize - 7) / 3);
       break;
-    case 3: //Miles per hour
+    case 3: //ECT | IAT
       digitalWrite(13, HIGH);
       lcd.setCursor(0, 1);
-      lcd.print("MPH: ");
+      lcd.print("ECT: ");
+      lcd.setCursor(7, 1);
+      lcd.print("C|IAT:");
+      lcd.setCursor(15, 1);
+      lcd.print("C");
       readBytes = ((case3ReqDataSize - 7) / 3);
       break;
     case 4: //Air:fuel Ratio
@@ -189,11 +192,13 @@ void lcdChange() {
       digitalWrite(13, LOW);
       readBytes = ((case4ReqDataSize - 7) / 3);
       break;
-    case 5: //Air:fuel Ratio
+    case 5: //MAF G/s
       //lcd.setCursor(5, 0);
       //lcd.print("     FBKC:");
       lcd.setCursor(0, 1);
-      lcd.print("G/s: ");
+      lcd.print("MAF: ");
+      lcd.setCursor(10, 1);
+      lcd.print("G/s");
       readBytes = ((case5ReqDataSize - 7) / 3);
       break;
   }
@@ -241,14 +246,27 @@ void lcdPrintSel() {
       lcd.print(fbkc, 2);
       digitalWrite(13, LOW);
       break;
-    case 3: //Miles per hour
-      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-      lcd.setCursor(5, 1);
-      lcd.print(milesPerHour, 2);
-      lcd.print("     ");
+    case 3: //ECT | IAT
+      //milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
+  //print ECT
+      lcd.setCursor(4, 1);
+      if (ECUbytes[0] < 100){
+        lcd.print(" ");
+        if (ECUbytes[0] < 10){
+          lcd.print(" ");
+        }
+      }
+      lcd.print(ECUbytes[0]);
+  //print IAT
+      lcd.setCursor(13, 1);
+        if (ECUbytes[1] < 10){
+          lcd.print(" ");
+        }
+      lcd.print(ECUbytes[1]);
+      //lcd.print(milesPerHour, 2);
       digitalWrite(13, HIGH);
       break;
-    case 4: //Air:fuel Ratio && knock?
+    case 4: //IAM && knock?
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
@@ -274,7 +292,7 @@ void updateTimeTemp() {
   theMinute = rtc.getMinute();
   theHour = rtc.getHour();
   theSecond = rtc.getSecond();
-  theTemperature = ((rtc.getTemperature() * 1.8) + 15 );
+  theTemperature = ((rtc.getTemperature() * 1.8) + 20 );
   lcd.setCursor(0, 0);
   if (theHour < 10) {
     lcd.print("0");
@@ -422,4 +440,3 @@ boolean readECU(int* dataArray, byte dataArrayLength, boolean nonZeroes)
   }
   //Serial.println("");
 }
-
