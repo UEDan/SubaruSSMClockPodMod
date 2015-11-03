@@ -256,13 +256,13 @@ void lcdPrintSel() {
           lcd.print(" ");
         }
       }
-      lcd.print(ECUbytes[0]);
+      lcd.print(ECUbytes[0] - 40);
   //print IAT
       lcd.setCursor(13, 1);
         if (ECUbytes[1] < 10){
           lcd.print(" ");
         }
-      lcd.print(ECUbytes[1]);
+      lcd.print(ECUbytes[1] - 40);
       //lcd.print(milesPerHour, 2);
       digitalWrite(13, HIGH);
       break;
