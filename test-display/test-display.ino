@@ -28,15 +28,11 @@ byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
-byte theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
-int timeUpdateCount = 0;
-int selMode = 1;
+int  milli, avgmpgCount = 0, timeUpdateCount = 0, selMode = 1;
 byte readBytes;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-int milli;
 unsigned long prvTime, curTime;
 double milesPerHour, airFuelR, fbkc, airFlowG, milesPerGallon, instantMPG;
-int avgmpgCount = 0;
 DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
@@ -92,7 +88,7 @@ void loop() {
     //delay(5);
     //  Serial.print("SentTime:");
     //  Serial.println(milli);
-    ssmWriteSel();
+    ssmWriteSel();  
     //writeSSM(ReqData, ReqDataSize, sendSerial);
     //Serial.print("Timer Popped | ");
     //Serial.println(sendSerial.available());
@@ -106,36 +102,6 @@ void loop() {
     prvTime = curTime;
 
     lcdPrintSel();
-    /*
-      milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-      airFuelR = ((ECUbytes[2] / 128.00) * 14.7);  //P58 0x000046
-      airFlowG = (((ECUbytes[1] * 256.00) + ECUbytes[7]) / 100.00); //P12 0x000013 and 0x000014
-      milesPerGallon = (milesPerHour / 3600.00) / (airFlowG / (airFuelR) / 2800.00);
-
-      Serial.print("MPH:");
-      Serial.print(milesPerHour, 0);
-      Serial.print(" | ");
-      Serial.print("Mass airflow/s:");
-      Serial.print(airFlowG);
-      Serial.print(" | ");
-      Serial.print("AFR: ");
-      Serial.print(airFuelR);
-      Serial.print(" | ");
-      Serial.print("MPG:");
-      Serial.print(milesPerGallon);
-      Serial.print(" | ");
-      Serial.print("Cruise:"); //0x000121
-      Serial.print(ECUbytes[3], BIN);
-      Serial.print(" | ");
-      Serial.print("Defogger:");
-      Serial.print(ECUbytes[4], BIN); //0x000064
-      Serial.print(" | ");
-      Serial.print("Gear:"); //0x0209C7
-      Serial.print(ECUbytes[5]);
-      Serial.print(" | ");
-      Serial.print("IAM:"); //0x020168
-      Serial.println(ECUbytes[6]);
-    */
 
   }
   //Mode switch read
@@ -247,21 +213,23 @@ void lcdPrintSel() {
       digitalWrite(13, LOW);
       break;
     case 3: //ECT | IAT
+      int engineCoolantTemp;
       //milesPerHour = (ECUbytes[0] * 0.621371192); //P9 0x000010
-  //print ECT
+      //print ECT
+      engineCoolantTemp = ECUbytes[0] - 40;
       lcd.setCursor(4, 1);
-      if (ECUbytes[0] < 100){
+      if (engineCoolantTemp < 100) {
         lcd.print(" ");
-        if (ECUbytes[0] < 10){
+        if (engineCoolantTemp < 10) {
           lcd.print(" ");
         }
       }
-      lcd.print(ECUbytes[0] - 40);
-  //print IAT
+      lcd.print(engineCoolantTemp);
+      //print IAT
       lcd.setCursor(13, 1);
-        if (ECUbytes[1] < 10){
-          lcd.print(" ");
-        }
+      if (ECUbytes[1] < 50) {
+        lcd.print(" ");
+      }
       lcd.print(ECUbytes[1] - 40);
       //lcd.print(milesPerHour, 2);
       digitalWrite(13, HIGH);
@@ -289,6 +257,7 @@ void lcdPrintSel() {
 }
 
 void updateTimeTemp() {
+  byte theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
   theMinute = rtc.getMinute();
   theHour = rtc.getHour();
   theSecond = rtc.getSecond();
@@ -318,7 +287,7 @@ void mpgAvg() {
   avgmpgCount++;
 
   if (avgmpgCount == 3) {
-    milesPerGallon /= 5.00; //Average after 3 instant polls
+    milesPerGallon /= 3.00; //Average after 3 instant polls
 
     lcd.setCursor(4, 1);
     if (milesPerGallon < 100) {
