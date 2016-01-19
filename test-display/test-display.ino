@@ -35,7 +35,7 @@ int  milli, avgmpgCount = 0, timeUpdateCount = 0, selMode = 1;
 byte readBytes;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long prvTime, curTime;
-double milesPerHour, airFuelR, fbkc, airFlowG, airFlowMax, milesPerGallon, instantMPG, engineRPM, throttleAngle, calcLoad, calcLoadMax;
+double milesPerHour, airFuelR, fbkc, airFlowG, lastMax, milesPerGallon, instantMPG, engineRPM, throttleAngle, calcLoad;
 DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
@@ -75,8 +75,8 @@ void setup() {
   //rtc.setHour(0);
   //rtc.setMinute(12);
 
-  //Zeros airFlowMax
-  airFlowMax = 0.00;
+  //Zeros lastMax
+  lastMax = 0.00;
   
   selMode = rtc.getYear() - 1; //Using year from RTC to save last set menu.
   lcdChange();
@@ -175,11 +175,13 @@ void lcdChange() {
       lcd.print("MAF: ");
       //lcd.setCursor(10, 1);
       //lcd.print("G/s"); //now printer at case5
-	  //Zeros airFlowMax
-	  airFlowMax = 0.00;
+	  //Zeros lastMax
+	  lastMax = 0.00;
       readBytes = ((case5ReqDataSize - 7) / 3);
       break;
     case 6: //Calculated Load | Throtle Position
+      //Zeros lastMax
+      lastMax = 0.00;
       lcd.setCursor(4, 1);
 	  //division lines and %
       lcd.print("      |    %");
@@ -272,10 +274,10 @@ void lcdPrintSel() {
         lcd.print(" ");
       }
       lcd.print(airFlowG, 1); //G/s
-	  if (airFlowG >= airFlowMax) {
-		  airFlowMax = airFlowG;
+	  if (airFlowG >= lastMax) {
+		  lastMax = airFlowG;
 		  lcd.print("|");
-		  lcd.print(airFlowMax, 0);
+		  lcd.print(lastMax, 0);
 		  lcd.print("G/s");
 	  }
       digitalWrite(13, HIGH);
@@ -287,10 +289,10 @@ void lcdPrintSel() {
 	  calcLoad = (airFlowG * 60.00) / engineRPM;
       lcd.setCursor(0, 1);
       lcd.print(calcLoad, 2);
-	  if (calcLoad >= calcLoadMax) {
-		  calcLoadMax = calcLoad;
+	  if (calcLoad >= lastMax) {
+		  lastMax = calcLoad;
 		  lcd.print("|");
-		  lcd.print(calcLoadMax, 2);
+		  lcd.print(lastMax, 2);
 	  }
 	  throttleAngle = (ECUbytes[0] * 100.00) / 255.00;
       lcd.setCursor(12, 1);
