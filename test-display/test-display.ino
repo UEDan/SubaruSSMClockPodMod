@@ -26,13 +26,16 @@ byte case4ReqDataSize = 10;
 //variables for Mass Air Flow G/s
 byte case5ReqData[13] = {128, 16, 240, 8, 168, 0, 0, 0, 19, 0, 0, 20, 87};
 byte case5ReqDataSize = 13;
+//variables for Mass Air Flow G/s
+byte case6ReqData[22] = {128, 16, 240, 22, 168, 0, 0, 0, 21, 0, 0, 14, 0, 0, 15, 0, 0, 19, 0, 0, 20, 151};
+byte case6ReqDataSize = 22;
 //4th byte is # of packets(no checksum) you idiot && double check checksum byte you jackass.
 
 int  milli, avgmpgCount = 0, timeUpdateCount = 0, selMode = 1;
 byte readBytes;
 int ECUbytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long prvTime, curTime;
-double milesPerHour, airFuelR, fbkc, airFlowG, milesPerGallon, instantMPG;
+double milesPerHour, airFuelR, fbkc, airFlowG, airFlowMax, milesPerGallon, instantMPG, engineRPM, throttleAngle, calcLoad, calcLoadMax;
 DS3231 rtc;
 
 //Declare LCD as lcd and I2C address
@@ -68,6 +71,13 @@ void setup() {
   delay(50);
   lcd.clear();
 
+  rtc.setClockMode(false);
+  //rtc.setHour(0);
+  //rtc.setMinute(12);
+
+  //Zeros airFlowMax
+  airFlowMax = 0.00;
+  
   selMode = rtc.getYear() - 1; //Using year from RTC to save last set menu.
   lcdChange();
   //lcd.setCursor(0, 1);
@@ -106,7 +116,7 @@ void loop() {
   }
   //Mode switch read
   if (digitalRead(9) == 1) {
-    if (selMode >= 5) {
+    if (selMode >= 6) {
       selMode = 0;
     }
     lcdChange();
@@ -163,9 +173,17 @@ void lcdChange() {
       //lcd.print("     FBKC:");
       lcd.setCursor(0, 1);
       lcd.print("MAF: ");
-      lcd.setCursor(10, 1);
-      lcd.print("G/s");
+      //lcd.setCursor(10, 1);
+      //lcd.print("G/s"); //now printer at case5
+	  //Zeros airFlowMax
+	  airFlowMax = 0.00;
       readBytes = ((case5ReqDataSize - 7) / 3);
+      break;
+    case 6: //Calculated Load | Throtle Position
+      lcd.setCursor(4, 1);
+	  //division lines and %
+      lcd.print("      |    %");
+      readBytes = ((case6ReqDataSize - 7) / 3);
       break;
   }
 }
@@ -179,14 +197,17 @@ void ssmWriteSel() {
     case 2: //IAM
       writeSSM(case2ReqData, case2ReqDataSize, sendSerial);
       break;
-    case 3: //Miles per hour
+    case 3: //ECT | IAT
       writeSSM(case3ReqData, case3ReqDataSize, sendSerial);
       break;
     case 4: //Air:fuel Ratio
       writeSSM(case4ReqData, case4ReqDataSize, sendSerial);
       break;
-    case 5: //Fuel Economy
+    case 5: //Maf G/s
       writeSSM(case5ReqData, case5ReqDataSize, sendSerial);
+      break;
+    case 6: //Calculated load | Throttle Poisition
+      writeSSM(case6ReqData, case6ReqDataSize, sendSerial);
       break;
   }
 }
@@ -234,7 +255,7 @@ void lcdPrintSel() {
       //lcd.print(milesPerHour, 2);
       digitalWrite(13, HIGH);
       break;
-    case 4: //IAM && knock?
+    case 4: //A:F
       airFuelR = ((ECUbytes[0] / 128.00) * 14.7);  //P58 0x000046
       lcd.setCursor(5, 1);
       lcd.print(airFuelR, 2);
@@ -250,18 +271,48 @@ void lcdPrintSel() {
       if (airFlowG < 10) {
         lcd.print(" ");
       }
-      lcd.print(airFlowG, 2); //G/s
+      lcd.print(airFlowG, 1); //G/s
+	  if (airFlowG >= airFlowMax) {
+		  airFlowMax = airFlowG;
+		  lcd.print("|");
+		  lcd.print(airFlowMax, 0);
+		  lcd.print("G/s");
+	  }
       digitalWrite(13, HIGH);
+      break;
+    case 6: //Calculated Load | Throttle
+	  //Calucated load = (airFlowG*60)/engineRPM
+      airFlowG = (((ECUbytes[3] * 256.00) + ECUbytes[4]) / 100.00); // MAF
+	  engineRPM = (((ECUbytes[2] * 256.00) + ECUbytes[2]) / 4.00); // RPM
+	  calcLoad = (airFlowG * 60.00) / engineRPM;
+      lcd.setCursor(0, 1);
+      lcd.print(calcLoad, 2);
+	  if (calcLoad >= calcLoadMax) {
+		  calcLoadMax = calcLoad;
+		  lcd.print("|");
+		  lcd.print(calcLoadMax, 2);
+	  }
+	  throttleAngle = (ECUbytes[0] * 100.00) / 255.00;
+      lcd.setCursor(12, 1);
+	  if (throttleAngle < 100) {
+        lcd.print(" ");
+      }
+      if (throttleAngle < 10) {
+        lcd.print(" ");
+      }
+	  lcd.print(throttleAngle, 0);
+      digitalWrite(13, LOW);
       break;
   }
 }
 
 void updateTimeTemp() {
-  byte theHour, theMinute, theSecond, theTemperature; //DS3231 Parameters
+  byte theHour, theMinute, theSecond;
+  float theTemperature; //DS3231 Parameters
   theMinute = rtc.getMinute();
   theHour = rtc.getHour();
   theSecond = rtc.getSecond();
-  theTemperature = ((rtc.getTemperature() * 1.8) + 20 );
+  theTemperature = (rtc.getTemperature()); // * 1.8) + 20 
   lcd.setCursor(0, 0);
   if (theHour < 10) {
     lcd.print("0");
@@ -278,8 +329,8 @@ void updateTimeTemp() {
   }
   lcd.print(theSecond);
   lcd.setCursor(11, 0);
-  lcd.print(theTemperature);
-  lcd.print("*F");
+  lcd.print(theTemperature, 0);
+  lcd.print("*C");
 }
 
 void mpgAvg() {
